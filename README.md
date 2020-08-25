@@ -8,6 +8,41 @@ This programm will read a request template from a file and apply changes to that
 
 It will generate requests, send them to the target and record the response. Response data will be written into an sqlite db.
 
+## Usage
+
+A typical call will look like this:
+
+```
+./requestfuzzer.py -t ./template -r ./rules --host target.example.net -p 443 --tls -c ./clientcert.pem -k ./key.pem -d ./record.db
+```
+
+You must use at least `-t/--template`, `-r/--rules`, `-o/--host` and `-d/--db`. This is the help text:
+
+```
+$ ./requestfuzzer.py -h
+usage: requestfuzzer.py [-h] -t TEMPLATE -r RULES -o HOST -d DB [-p PORT] [-s] [-c CERT] [-k KEY] [-n THREADS]
+
+HTTP Request Fuzzer
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t TEMPLATE, --template TEMPLATE
+                        path to the template file
+  -r RULES, --rules RULES
+                        path to the rules file
+  -o HOST, --host HOST  target IP or host name
+  -d DB, --db DB        path to the DB file
+  -p PORT, --port PORT  target port
+  -s, --tls             use TLS to connect to the target
+  -c CERT, --certificate CERT
+                        client certificate in PEM format
+  -k KEY, --key KEY     client key in PEM format
+  -n THREADS, --threads THREADS
+                        number of sender threads
+```
+
+The program can connect to a service that requires a TLS client certificate by using `-c/--certificate` and `-k/--key`.
+
 ## Structure
 
 The program runs with three threads:
