@@ -1,0 +1,3 @@
+endpoint:command:./randomuuid.py
+bar:randint:100
+lines:randstr:50
