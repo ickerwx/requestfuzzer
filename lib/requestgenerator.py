@@ -5,7 +5,9 @@ import shlex
 import subprocess
 import re
 import time
+import queue
 from lib.common import Request
+from lib.common import ABORT_MSG, PLS_FINISH_MSG
 
 
 # will loop over a wordlist
@@ -39,13 +41,13 @@ class RandomAction:
 
     # generates a random alphanum string
     def randomstr(self):
-        return ''.join(random.choices(string.ascii_letters + string.digits, k=self.randomint()))
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=int(self.randomint())))
 
     def randomint(self):
         return str(random.randrange(self.len))
 
     def randombytes(self):
-        return str(secrets.token_bytes(self.randomint))
+        return str(secrets.token_bytes(int(self.randomint())))
 
 
 class CommandAction:
@@ -59,13 +61,16 @@ class CommandAction:
 
 class RequestGenerator:
 
-    def __init__(self, templatefile, rulesfile, requestqueue, host, port):
+    def __init__(self, templatefile, rulesfile, requestqueue, cmdqueue, host, port, count):
         with open(templatefile, "r") as f:
             template = f.read()
 
         self.template = template
-        self.queue = requestqueue
+        self.requestqueue = requestqueue
+        self.cmdqueue = cmdqueue
         self.counter = 0
+        self.maxcount = count
+        self.done = False
         placeholders = set(re.findall(r"§(\w+)§", self.template))
         self.rules = {}
         self.destination = (host, int(port))
@@ -89,24 +94,39 @@ class RequestGenerator:
                 raise ValueError("No action found for placeholder " + p)
 
     def generate(self):
-        text = self.template
-        for placeholder in self.rules.keys():
-            text = text.replace(f"§{placeholder}§", self.rules[placeholder].exec())
+        while True:
+            # the method will exit if self.maxcount requests have been created or if the abort command has been given
+            text = self.template
+            for placeholder in self.rules.keys():
+                text = text.replace(f"§{placeholder}§", self.rules[placeholder].exec())
 
-        # detect line endings: \n or \r\n?
-        lines = text.split('\n')
-        end = '\r\n' if lines[0].endswith('\r') else '\n'
+            # detect line endings: \n or \r\n?
+            lines = text.split('\n')
+            end = '\r\n' if lines[0].endswith('\r') else '\n'
 
-        # split text at 2*end to get request headers and body
-        # then replace the content-length header with the correct value, if that header exists
-        headers, body = text.split(2*end, 1)
-        headers = re.sub(r"(content-length:)\s*\d+", r"\1 "+str(len(body)), headers, flags=re.IGNORECASE)
-        text = headers + 2*end + body
-        r = Request(bytes(text, "utf-8"), self.counter, self.destination)
-        self.counter += 1
-        self.queue.put(r)  # write request into the queue, a sender thread will pull it
-        while self.queue.qsize() > 30:
-            time.sleep(1)
+            # split text at 2*end to get request headers and body
+            # then replace the content-length header with the correct value, if that header exists
+            headers, body = text.split(2*end, 1)
+            headers = re.sub(r"(content-length:)\s*\d+", r"\1 "+str(len(body)), headers, flags=re.IGNORECASE)
+            text = headers + 2*end + body
+            r = Request(bytes(text, "utf-8"), self.counter, self.destination)
+            self.counter += 1
+            self.requestqueue.put(r)  # write request into the queue, a sender thread will pull it
+            if self.counter == self.maxcount:
+                self.done = True
+                return
+            try:
+                recipient, message = self.cmdqueue.get_nowait()
+                if recipient == 'generator':
+                    if message in [ABORT_MSG, PLS_FINISH_MSG]:
+                        return
+                else:
+                    self.cmdqueue.put((recipient, message))
+            except queue.Empty:
+                # if the command queue is empty, just continue
+                pass
+            if self.requestqueue.qsize() > 100:
+                time.sleep(1)
 
     def set_host(self, hostname):
         self.destination[0] = hostname

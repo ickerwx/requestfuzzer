@@ -3,11 +3,13 @@
 import argparse
 import threading
 import sys
+import time
 from queue import Queue
 
 from lib.requestgenerator import RequestGenerator
 from lib.requestsender import RequestSender
 from lib.requestrecorder import RequestRecorder
+from lib.common import ABORT_MSG, PLS_FINISH_MSG
 
 
 def parse_args():
@@ -18,25 +20,35 @@ def parse_args():
     parser.add_argument('-o', '--host', dest='host', help='target IP or host name', required=True)
     parser.add_argument('-d', '--db', dest='db', help='path to the DB file', required=True)
     parser.add_argument('-p', '--port', dest='port', type=int, default=80, help='target port')
-    # parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true',
-    #                     help='More verbose output of status information')
+    parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true',
+                        help='More verbose output of status information')
     parser.add_argument('-s', '--tls', dest='use_tls', action='store_true', default=False,
                         help='use TLS to connect to the target')
     parser.add_argument('-c', '--certificate', dest='cert', default=None, help='client certificate in PEM format')
     parser.add_argument('-k', '--key', dest='key', default=None, help='client key in PEM format')
     parser.add_argument('-n', '--threads', dest='threads', type=int, default=10, help='number of sender threads')
+    parser.add_argument('-x', '--count', dest='count', type=int, default=1000, help='number of requests to send')
 
     return parser.parse_args()
 
 
-def generate_requests(generator):
-    while True:
-        generator.generate()
-
-
-def send_requests(sender):
-    while True:
-        sender.send()
+def leave(message, threads, commandqueue, verbose):
+    if verbose:
+        print('\nSending signal to sender threads.')
+    for i in range(len(threads) - 2):
+        # all except two threads are senders
+        commandqueue.put(('sender', message))
+    for t in threads:
+        if t.name.startswith('Sender'):
+            t.join()
+    if verbose:
+        print('Sender threads finished.')
+        print('Terminating remaining threads.')
+    commandqueue.put(('recorder', message))
+    commandqueue.put(('generator', message))
+    for t in threads:
+        t.join()
+    sys.exit(0)
 
 
 def main():
@@ -49,23 +61,52 @@ def main():
 
     requestqueue = Queue()
     responsequeue = Queue()
+    commandqueue = Queue()
 
-    generator = RequestGenerator(args.template, args.rules, requestqueue, args.host, args.port)
-    generatorthread = threading.Thread(target=generate_requests, args=(generator,))
+    threads = []
+
+    generator = RequestGenerator(args.template, args.rules, requestqueue, commandqueue, args.host, args.port, args.count)
+    generatorthread = threading.Thread(target=generator.generate, name="Generator")
     generatorthread.start()
+    threads.append(generatorthread)
+
+    # wait a few seconds to enable the generator to put a few requests into the queue
+    if args.verbose:
+        print('Prepopulating request queue...', end='', flush=True)
+    time.sleep(5)
+    if args.verbose:
+        print('done.', flush=True)
 
     for i in range(args.threads):
-        senderthread = threading.Thread(target=send_requests, args=(RequestSender(requestqueue, responsequeue, tlsConfig),))
+        sender = RequestSender(requestqueue, responsequeue, commandqueue, tlsConfig)
+        senderthread = threading.Thread(target=sender.send, name=f"Sender-{i}")
         senderthread.start()
+        threads.append(senderthread)
+
+    recorder = RequestRecorder(responsequeue, commandqueue, args.db)
+    recorderthread = threading.Thread(target=recorder.processResponse, name="Recorder")
+    recorderthread.start()
+    threads.append(recorderthread)
 
     try:
-        recorder = RequestRecorder(responsequeue, args.db)
+        timestamp = time.time()
         while True:
-            recorder.processResponse()
-            # TODO: implement clean program termination
+            time.sleep(1)
+            if time.time() - timestamp >= 10:
+                # print stats every 10 seconds
+                print(f"Request queue: {requestqueue.qsize()} Response queue: {responsequeue.qsize()}    ", end='\r')
+                timestamp = time.time()
+            if responsequeue.qsize() == 0 and requestqueue.qsize() == 0:
+                if args.verbose:
+                    print("\nLooks like all queues are empty, exiting.")
+                leave(PLS_FINISH_MSG, threads, commandqueue, args.verbose)
+            if generator.done:
+                if args.verbose:
+                    print(f"\nGenerator is done creating {args.count} messages, exiting.")
+                leave(PLS_FINISH_MSG, threads, commandqueue, args.verbose)
     except KeyboardInterrupt:
         print('\nCtrl+C detected, exiting...')
-        sys.exit(0)
+        leave(ABORT_MSG, threads, commandqueue, args.verbose)
 
 
 if __name__ == "__main__":

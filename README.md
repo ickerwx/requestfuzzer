@@ -1,6 +1,6 @@
 # HTTP Request Fuzzer
 
-This programm will read a request template from a file and apply changes to that template defined in a rules file. These changes can be:
+I wrote this program to fuzz REST API calls. It will read a request template from a file and apply changes to that template defined in a rules file. These changes can be:
  
  - replace placeholder with word from a wordlist
  - replace placeholder with result from an executable
@@ -10,7 +10,7 @@ It will generate requests, send them to the target and record the response. Resp
 
 ## Usage
 
-A typical call will look like this:
+First prepare two files, a request template and a rules file (see next section for details). A typical call will look like this:
 
 ```
 ./requestfuzzer.py -t ./template -r ./rules --host target.example.net -p 443 --tls -c ./clientcert.pem -k ./key.pem -d ./record.db
@@ -19,8 +19,8 @@ A typical call will look like this:
 You must use at least `-t/--template`, `-r/--rules`, `-o/--host` and `-d/--db`. This is the help text:
 
 ```
-$ ./requestfuzzer.py -h
-usage: requestfuzzer.py [-h] -t TEMPLATE -r RULES -o HOST -d DB [-p PORT] [-s] [-c CERT] [-k KEY] [-n THREADS]
+./requestfuzzer.py -h
+usage: requestfuzzer.py [-h] -t TEMPLATE -r RULES -o HOST -d DB [-p PORT] [-v] [-s] [-c CERT] [-k KEY] [-n THREADS] [-x COUNT]
 
 HTTP Request Fuzzer
 
@@ -33,12 +33,15 @@ optional arguments:
   -o HOST, --host HOST  target IP or host name
   -d DB, --db DB        path to the DB file
   -p PORT, --port PORT  target port
+  -v, --verbose         More verbose output of status information
   -s, --tls             use TLS to connect to the target
   -c CERT, --certificate CERT
                         client certificate in PEM format
   -k KEY, --key KEY     client key in PEM format
   -n THREADS, --threads THREADS
                         number of sender threads
+  -x COUNT, --count COUNT
+                        number of requests to send
 ```
 
 The program can connect to a service that requires a TLS client certificate by using `-c/--certificate` and `-k/--key`.
@@ -112,3 +115,11 @@ The Recorder will take the responses and write them into a sqlite database. It w
  - response string
  - HTTP response code
  - content length
+
+## Tips and Notes
+
+Although this program is used to fuzz HTTP requests, it is not at all aware of HTTP and its particular requirements and quirks. The code opens a socket and sends whatever you tell it to, then reads the response. At present, several things like `Content-Length` correction and reading response status codes are hardcoded, but you can easily write a seperate generator or recorder for pretty much any protocol, knock yourself out.
+
+### HTTP Auth
+
+Like I said, no part of this code is actually HTTP aware. If you need to test something behind HTTP authentication, either hardcode the header in your request template or write some code that does what needs to be done and then outputs a valid header. In your template you set a placeholder and let that placeholder be replaced by your code's output.

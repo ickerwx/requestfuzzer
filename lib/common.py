@@ -11,3 +11,7 @@ class Response:
         self.request = request
         self.response = responsestring
         self.time = timestamp
+
+
+ABORT_MSG = 'abort abort abort!'
+PLS_FINISH_MSG = 'please finish, then go'
