@@ -46,6 +46,10 @@ class RandomAction(ActionBase):
         else:
             self.exec = self.randombytes
 
+    def exec(self):
+        # will be overridden in the constructor
+        pass
+    
     # generates a random alphanum string
     def randomstr(self):
         return ''.join(random.choices(string.ascii_letters + string.digits, k=int(self.randomint())))

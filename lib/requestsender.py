@@ -9,7 +9,7 @@ from lib.common import ABORT_MSG, PLS_FINISH_MSG
 
 class SenderBase(ABC):
     @abstractmethod
-    def processResponse(self):
+    def send(self):
         pass
 
 
