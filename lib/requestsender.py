@@ -3,10 +3,17 @@ import socket
 import ssl
 import queue
 from datetime import datetime
+from abc import ABC, abstractmethod
 from lib.common import ABORT_MSG, PLS_FINISH_MSG
 
 
-class RequestSender:
+class SenderBase(ABC):
+    @abstractmethod
+    def processResponse(self):
+        pass
+
+
+class TCPRequestSender(SenderBase):
     def __init__(self, requestqueue, responsequeue, cmdqueue, tlsConfig):
         self.requestqueue = requestqueue
         self.responsequeue = responsequeue

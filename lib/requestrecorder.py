@@ -1,10 +1,17 @@
 import sqlite3
 import re
 import queue
+from abc import ABC, abstractmethod
 from lib.common import ABORT_MSG, PLS_FINISH_MSG
 
 
-class RequestRecorder:
+class RecorderBase(ABC):
+    @abstractmethod
+    def processResponse(self):
+        pass
+
+
+class HTTPRequestRecorder(RecorderBase):
     def __init__(self, responsequeue, cmdqueue, dbpath):
         self.queue = responsequeue
         self.cmdqueue = cmdqueue
@@ -29,6 +36,8 @@ class RequestRecorder:
         self.cursor.execute(query)
 
     def processResponse(self):
+        # connection and cursor need to be instantiated here instead of the constructor b/c this method will be run in
+        # a different thread than the constructor, and sqlite doesn't like that.
         self.connection = sqlite3.connect(self.dbpath)
         self.cursor = self.connection.cursor()
         query = "insert into fuzzdata values (?, ?, ?, ?, ?, ?, ?, ?, ?)"

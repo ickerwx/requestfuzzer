@@ -6,9 +6,9 @@ import sys
 import time
 from queue import Queue
 
-from lib.requestgenerator import RequestGenerator
-from lib.requestsender import RequestSender
-from lib.requestrecorder import RequestRecorder
+from lib.requestgenerator import HTTPRequestGenerator
+from lib.requestsender import TCPRequestSender
+from lib.requestrecorder import HTTPRequestRecorder
 from lib.common import ABORT_MSG, PLS_FINISH_MSG
 
 
@@ -65,7 +65,7 @@ def main():
 
     threads = []
 
-    generator = RequestGenerator(args.template, args.rules, requestqueue, commandqueue, args.host, args.port, args.count)
+    generator = HTTPRequestGenerator(args.template, args.rules, requestqueue, commandqueue, args.host, args.port, args.count)
     generatorthread = threading.Thread(target=generator.generate, name="Generator")
     generatorthread.start()
     threads.append(generatorthread)
@@ -78,12 +78,12 @@ def main():
         print('done.', flush=True)
 
     for i in range(args.threads):
-        sender = RequestSender(requestqueue, responsequeue, commandqueue, tlsConfig)
+        sender = TCPRequestSender(requestqueue, responsequeue, commandqueue, tlsConfig)
         senderthread = threading.Thread(target=sender.send, name=f"Sender-{i}")
         senderthread.start()
         threads.append(senderthread)
 
-    recorder = RequestRecorder(responsequeue, commandqueue, args.db)
+    recorder = HTTPRequestRecorder(responsequeue, commandqueue, args.db)
     recorderthread = threading.Thread(target=recorder.processResponse, name="Recorder")
     recorderthread.start()
     threads.append(recorderthread)

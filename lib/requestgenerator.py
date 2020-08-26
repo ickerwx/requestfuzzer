@@ -7,6 +7,7 @@ import re
 import time
 import queue
 from lib.common import Request
+from abc import ABC, abstractmethod
 from lib.common import ABORT_MSG, PLS_FINISH_MSG
 
 
@@ -59,7 +60,13 @@ class CommandAction:
         return out.stdout.decode('utf-8').rstrip()
 
 
-class RequestGenerator:
+class GeneratorBase(ABC):
+    @abstractmethod
+    def generate(self):
+        pass
+
+
+class HTTPRequestGenerator(GeneratorBase):
 
     def __init__(self, templatefile, rulesfile, requestqueue, cmdqueue, host, port, count):
         with open(templatefile, "r") as f:
