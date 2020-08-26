@@ -29,7 +29,7 @@ class HTTPRequestRecorder(RecorderBase):
             port INTEGER,
             req_timestamp TEXT,
             request TEXT,
-            resp_timestamp REAL,
+            resp_timestamp TEXT,
             response TEXT,
             code TEXT,
             length INTEGER)"""
