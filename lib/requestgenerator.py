@@ -11,8 +11,14 @@ from abc import ABC, abstractmethod
 from lib.common import ABORT_MSG, PLS_FINISH_MSG
 
 
+class ActionBase(ABC):
+    @abstractmethod
+    def exec(self):
+        pass
+
+
 # will loop over a wordlist
-class WordlistAction:
+class WordlistAction(ActionBase):
     def __init__(self, wordlistpath):
         with open(wordlistpath, "r") as f:
             words = [word.strip() for word in f.readlines()]
@@ -27,7 +33,7 @@ class WordlistAction:
         return word
 
 
-class RandomAction:
+class RandomAction(ActionBase):
     def __init__(self, type, length=20):
         if type not in ['randstr', 'randint', 'randbytes']:
             raise ValueError('type must be randstr, randint or randbytes')
@@ -51,7 +57,7 @@ class RandomAction:
         return str(secrets.token_bytes(int(self.randomint())))
 
 
-class CommandAction:
+class CommandAction(ActionBase):
     def __init__(self, command):
         self.cmd = shlex.split(command)
 
