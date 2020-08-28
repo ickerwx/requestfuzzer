@@ -1,10 +1,10 @@
-from lib.common import Response
+import queue
 import socket
 import ssl
-import queue
-from datetime import datetime
 from abc import ABC, abstractmethod
+from datetime import datetime
 from lib.common import ABORT_MSG, PLS_FINISH_MSG
+from lib.common import Response
 
 
 class SenderBase(ABC):
@@ -34,7 +34,7 @@ class TCPRequestSender(SenderBase):
                 if self.use_tls:
                     sock = self.ssl_context.wrap_socket(sock, server_hostname=request.destination[0])
                 request.time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-                sock.send(request.request)
+                sock.send(request.text)
                 self.requestqueue.task_done()
                 resp = b""
                 while True:

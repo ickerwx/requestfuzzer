@@ -1,6 +1,6 @@
 class Request:
     def __init__(self, requeststring, requestnum, destination):
-        self.request = requeststring
+        self.text = requeststring
         self.num = requestnum
         self.time = None
         self.destination = destination
@@ -9,7 +9,7 @@ class Request:
 class Response:
     def __init__(self, request, responsestring, timestamp):
         self.request = request
-        self.response = responsestring
+        self.text = responsestring
         self.time = timestamp
 
 

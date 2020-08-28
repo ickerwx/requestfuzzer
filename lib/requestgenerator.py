@@ -1,14 +1,15 @@
+import codecs
+import queue
 import random
-import string
+import re
 import secrets
 import shlex
+import string
 import subprocess
-import re
 import time
-import queue
-from lib.common import Request
 from abc import ABC, abstractmethod
 from lib.common import ABORT_MSG, PLS_FINISH_MSG
+from lib.common import Request
 
 
 class ActionBase(ABC):
@@ -67,7 +68,7 @@ class CommandAction(ActionBase):
 
     def exec(self):
         out = subprocess.run(self.cmd, stdout=subprocess.PIPE)
-        return out.stdout.decode('utf-8').rstrip()
+        return codecs.decode(out.stdout, 'latin_1').rstrip()
 
 
 class GeneratorBase(ABC):

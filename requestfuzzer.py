@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
 import argparse
-import threading
 import sys
+import threading
 import time
-from queue import Queue
 
-from lib.requestgenerator import HTTPRequestGenerator
-from lib.requestsender import TCPRequestSender
-from lib.requestrecorder import HTTPRequestRecorder
 from lib.common import ABORT_MSG, PLS_FINISH_MSG
+from lib.requestgenerator import HTTPRequestGenerator
+from lib.requestrecorder import HTTPRequestRecorder
+from lib.requestsender import TCPRequestSender
+from queue import Queue
 
 
 def parse_args():
@@ -64,11 +64,15 @@ def main():
     commandqueue = Queue()
 
     threads = []
-
+    if args.verbose:
+        print("Creating and starting threads:", flush=True)
+        print("Generator: ", end="", flush=True)
     generator = HTTPRequestGenerator(args.template, args.rules, requestqueue, commandqueue, args.host, args.port, args.count)
     generatorthread = threading.Thread(target=generator.generate, name="Generator")
     generatorthread.start()
     threads.append(generatorthread)
+    if args.verbose:
+        print("ok", flush=True)
 
     # wait a few seconds to enable the generator to put a few requests into the queue
     if args.verbose:
@@ -76,17 +80,23 @@ def main():
     time.sleep(5)
     if args.verbose:
         print('done.', flush=True)
-
+    if args.verbose:
+        print("Senders: ", end="", flush=True)
     for i in range(args.threads):
         sender = TCPRequestSender(requestqueue, responsequeue, commandqueue, tlsConfig)
         senderthread = threading.Thread(target=sender.send, name=f"Sender-{i}")
         senderthread.start()
         threads.append(senderthread)
-
+    if args.verbose:
+        print("ok", flush=True)
+    if args.verbose:
+        print("Recorder: ", end="", flush=True)
     recorder = HTTPRequestRecorder(responsequeue, commandqueue, args.db)
     recorderthread = threading.Thread(target=recorder.processResponse, name="Recorder")
     recorderthread.start()
     threads.append(recorderthread)
+    if args.verbose:
+        print("ok", flush=True)
 
     try:
         timestamp = time.time()
