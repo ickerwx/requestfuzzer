@@ -32,7 +32,11 @@ class TCPRequestSender(SenderBase):
                 request = self.requestqueue.get(timeout=1)
                 sock = socket.create_connection(request.destination)
                 if self.use_tls:
-                    sock = self.ssl_context.wrap_socket(sock, server_hostname=request.destination[0])
+                    try:
+                        sock = self.ssl_context.wrap_socket(sock, server_hostname=request.destination[0])
+                    except ssl.SSLError as se:
+                        print(se)
+                        return
                 request.time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
                 sock.send(request.text)
                 self.requestqueue.task_done()
