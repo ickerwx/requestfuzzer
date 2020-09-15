@@ -40,14 +40,23 @@ def leave(message, threads, commandqueue, verbose):
         commandqueue.put(('sender', message))
     for t in threads:
         if t.name.startswith('Sender'):
+            if verbose:
+                print(f'Waiting for thread {t.name}\t', end="", flush=True)
             t.join()
+            if verbose:
+                print('🗸', flush=True)
     if verbose:
         print('Sender threads finished.')
         print('Terminating remaining threads.')
     commandqueue.put(('recorder', message))
     commandqueue.put(('generator', message))
     for t in threads:
-        t.join()
+        if not t.name.startswith('Sender'):
+            if verbose:
+                print(f'Waiting for thread {t.name}\t', end="", flush=True)
+            t.join()
+            if verbose:
+                print('🗸', flush=True)
     sys.exit(0)
 
 
@@ -66,13 +75,13 @@ def main():
     threads = []
     if args.verbose:
         print("Creating and starting threads:", flush=True)
-        print("Generator: ", end="", flush=True)
+        print("Generator:\t", end="", flush=True)
     generator = HTTPRequestGenerator(args.template, args.rules, requestqueue, commandqueue, args.host, args.port, args.count)
     generatorthread = threading.Thread(target=generator.generate, name="Generator")
     generatorthread.start()
     threads.append(generatorthread)
     if args.verbose:
-        print("ok", flush=True)
+        print("started", flush=True)
 
     # wait a few seconds to enable the generator to put a few requests into the queue
     if args.verbose:
@@ -81,22 +90,22 @@ def main():
     if args.verbose:
         print('done.', flush=True)
     if args.verbose:
-        print("Senders: ", end="", flush=True)
+        print("Senders:\t", end="", flush=True)
     for i in range(args.threads):
         sender = TCPRequestSender(requestqueue, responsequeue, commandqueue, tlsConfig)
         senderthread = threading.Thread(target=sender.send, name=f"Sender-{i}")
         senderthread.start()
         threads.append(senderthread)
     if args.verbose:
-        print("ok", flush=True)
+        print("started", flush=True)
     if args.verbose:
-        print("Recorder: ", end="", flush=True)
+        print("Recorder:\t", end="", flush=True)
     recorder = HTTPRequestRecorder(responsequeue, commandqueue, args.db)
     recorderthread = threading.Thread(target=recorder.processResponse, name="Recorder")
     recorderthread.start()
     threads.append(recorderthread)
     if args.verbose:
-        print("ok", flush=True)
+        print("started", flush=True)
 
     try:
         timestamp = time.time()
