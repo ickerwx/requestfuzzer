@@ -61,7 +61,7 @@ class HTTPRequestRecorder(RecorderBase):
 
                     # split text at 2*end to get request headers and body
                     # then replace the content-length header with the correct value, if that header exists
-                    _, body = decode(response.text, "latin_1").split(2*end, 1)
+                    _, body = decode(response.request.text, "latin_1").split(2*end, 1)
                     request_length = len(body)
                 try:
                     response_length = re.findall(r"Content-Length:\s*(\d+)", decode(response.text, "latin_1"))[0]
