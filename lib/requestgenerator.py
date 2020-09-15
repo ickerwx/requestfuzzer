@@ -80,8 +80,9 @@ class GeneratorBase(ABC):
 class HTTPRequestGenerator(GeneratorBase):
 
     def __init__(self, templatefile, rulesfile, requestqueue, cmdqueue, host, port, count):
-        with open(templatefile, "r") as f:
+        with open(templatefile, "r", newline='') as f:
             template = f.read()
+            print(repr(template))
 
         self.template = template
         self.requestqueue = requestqueue
