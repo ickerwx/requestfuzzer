@@ -100,7 +100,7 @@ Generate a random string, a random positive integer or a sequence of random byte
  - randstr/randbytes: the number is the maximum length of the string or the byte sequence
  - randint: the number is the upper bound, the generated number will be between 0 and the bound
  - randhex: the number is the exact length of the generated random hex string
- - randb64: take a random number, between 0 and *<number>*, random bytes and base64-encode them
+ - randb64: take a random number, between 0 and *number*, random bytes and base64-encode them
 
 ### command
 
