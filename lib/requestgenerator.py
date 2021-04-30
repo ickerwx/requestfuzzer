@@ -1,4 +1,6 @@
+import base64
 import codecs
+import json
 import queue
 import random
 import re
@@ -36,30 +38,40 @@ class WordlistAction(ActionBase):
 
 class RandomAction(ActionBase):
     def __init__(self, type, length=20):
-        if type not in ['randstr', 'randint', 'randbytes']:
-            raise ValueError('type must be randstr, randint or randbytes')
+        if type not in ['randstr', 'randint', 'randbytes', 'randhex', 'randb64']:
+            raise ValueError('type must be one of randstr, randint, randbytes, randhex, randb64')
         self.len = int(length)
 
         if type == 'randstr':
             self.exec = self.randomstr
         elif type == 'randint':
             self.exec = self.randomint
+        elif type == 'randhex':
+            self.exec = self.randhex
+        elif type == 'randb64':
+            self.exec = self.randb64
         else:
             self.exec = self.randombytes
 
     def exec(self):
         # will be overridden in the constructor
         pass
-    
+
     # generates a random alphanum string
     def randomstr(self):
         return ''.join(random.choices(string.ascii_letters + string.digits, k=int(self.randomint())))
+
+    def randhex(self):
+        return ''.join(random.choices('0123456789ABCDEF', k=self.len))
 
     def randomint(self):
         return str(random.randrange(self.len))
 
     def randombytes(self):
         return str(secrets.token_bytes(int(self.randomint())))
+
+    def randb64(self):
+        return str(base64.b64encode(secrets.token_bytes(int(self.randomint()))))
 
 
 class CommandAction(ActionBase):

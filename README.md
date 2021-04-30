@@ -86,17 +86,21 @@ Content-Length: 10
   - randstr
   - randint
   - randbytes
+  - randhex
+  - randb64
   - command
 
 ### wordlist
 
 Loop over a wordlist, one word at a time. If at the end, start again at the beginning. The only parameter for this is the path to the wordlist.
 
-### rand(str|int|bytes)
+### rand(str|int|bytes|hex|b64)
 
 Generate a random string, a random positive integer or a sequence of random bytes. The parameter is always a single positive number:
  - randstr/randbytes: the number is the maximum length of the string or the byte sequence
  - randint: the number is the upper bound, the generated number will be between 0 and the bound
+ - randhex: the number is the exact length of the generated random hex string
+ - randb64: take a random number, between 0 and *<number>*, random bytes and base64-encode them
 
 ### command
 
